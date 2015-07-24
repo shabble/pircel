@@ -110,8 +110,9 @@ def main():
 
     # setup logging
     log_level = logging.DEBUG if args.debug else logging.INFO
-    root_logger = logging.getLogger()
-    root_logger.setLevel(log_level)
+    log_date_format = "%Y-%m-%d %H:%M:%S"
+    log_format = "%(asctime)s\t%(levelname)s\t%(module)s:%(funcName)s:%(lineno)d\t%(message)s"
+    logging.basicConfig(level=log_level, format=log_format, datefmt=log_date_format)
     logging.captureWarnings(True)
 
     user = protocol.User(args.nick, args.username, args.real_name)
