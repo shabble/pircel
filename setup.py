@@ -8,7 +8,6 @@ import pircel
 
 install_requires = [
     'chardet',
-    'logbook',
 ]
 
 classifiers = [

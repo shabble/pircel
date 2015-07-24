@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf8 -*-
 import collections
+import logging
 import pprint
 
 import chardet
-import logbook
 
 import pircel
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Error(pircel.Error):
@@ -149,9 +149,9 @@ def decode(line):
     try:
         line = str(line, encoding='utf8')
     except UnicodeDecodeError:
-        logger.debug('UTF8 decode failed, bytes: {}', line)
+        logger.debug('UTF8 decode failed, bytes: %s', line)
         encoding = chardet.detect(line)['encoding']
-        logger.debug('Tried autodetecting and got {}, decoding now', encoding)
+        logger.debug('Tried autodetecting and got %s, decoding now', encoding)
         line = str(line, encoding=encoding)
     return line
 
@@ -269,13 +269,13 @@ class IRCServerHandler:
 
     def log_unhandled(self, command, prefix, args):
         """ Called when we encounter a command we either don't know or don't have a handler for. """
-        logger.warning('Unhandled Command received: {} with args ({}) from prefix {}'.format(command, args, prefix))
+        logger.warning('Unhandled Command received: %s with args (%s) from prefix %s', command, args, prefix)
 
     # ===============
     # Handlers follow
     # ===============
     def on_ping(self, prefix, token, *args):
-        logger.debug('Ping received: {}, {}', prefix, token)
+        logger.debug('Ping received: %s, %s', prefix, token)
         self.pong(token)
 
     def on_privmsg(self, who_from, to, msg):
@@ -307,7 +307,7 @@ class IRCServerHandler:
     # ==========
 
     def on_notice(self, prefix, _, message):
-        logger.info('NOTICE: {}'.format(message))
+        logger.info('NOTICE: %s', message)
 
     def on_mode(self, prefix, channel, command, nick):
         user = self.get_user_by_nick(nick)
@@ -315,7 +315,7 @@ class IRCServerHandler:
 
     def on_nick(self, who, new_nick):
         user = self.get_user_full(who)
-        logger.debug('User {} changed nick to {}', user.nick, new_nick)
+        logger.debug('User %s changed nick to %s', user.nick, new_nick)
         del self.users[user.nick]
         user.name = new_nick
         self.users[new_nick] = user
@@ -347,7 +347,7 @@ class IRCServerHandler:
         pass
 
     def on_rpl_isupport(self, *args):
-        logger.debug('Server supports: {}', args)
+        logger.debug('Server supports: %s', args)
 
     def on_rpl_luserclient(self, *args):
         pass
@@ -433,7 +433,7 @@ class IRCChannel:
         self._debug_out_loud = debug_out_loud
 
     def user_join(self, user):
-        logger.debug('{} joined {}', user, self.name)
+        logger.debug('%s joined %s', user, self.name)
         if user.nick in self.users:
             raise UserAlreadyExistsError(
                 'Tried to add user "{}" to channel {}'.format(user.nick, self.name)
@@ -441,7 +441,7 @@ class IRCChannel:
         self.users.add(user)
 
     def user_part(self, user):
-        logger.debug('{} parted from {}', user, self.name)
+        logger.debug('%s parted from %s', user, self.name)
         try:
             self.users.remove(user)
         except KeyError as e:
@@ -467,7 +467,7 @@ class IRCChannel:
             raise Error('Debug exception')
 
     def join(self, password=None):
-        logger.debug('Joining {}', self.name)
+        logger.debug('Joining %s', self.name)
         if password:
             self._write('JOIN {} {}'.format(self.name, password))
         else:

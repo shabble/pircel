@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf8 -*-
-import logbook
+import logging
+
 from tornado import gen, ioloop, tcpclient
 
 from pircel import protocol
 
 CHANNEL_JOIN_DELAY = 30
 
-logger = logbook.Logger(__name__)
+logger = logging.getLogger(__name__)
 loopinstance = ioloop.IOLoop.instance()
 
 
@@ -19,7 +20,7 @@ class LineStream:
 
     @gen.coroutine
     def connect(self, host, port):
-        logger.debug('Connecting to server {}:{}', host, port)
+        logger.debug('Connecting to server %s:%s', host, port)
         self.connection = yield self.tcp_client_factory.connect(host, port)
         logger.debug('Connected.')
         if self.connect_callback is not None:
@@ -108,15 +109,17 @@ def main():
     args = get_parsed_args()
 
     # setup logging
-    log_handler = logbook.StderrHandler(level=logbook.DEBUG if args.debug else logbook.INFO)
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+    logging.captureWarnings(True)
 
     user = protocol.User(args.nick, args.username, args.real_name)
     server_handler = protocol.IRCServerHandler(user, args.debug_out_loud)
 
     connect(args, server_handler)
 
-    with log_handler.applicationbound():
-        main_loop()
+    main_loop()
 
 
 if __name__ == '__main__':
