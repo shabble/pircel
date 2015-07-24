@@ -32,6 +32,7 @@ class UnknownModeCommandError(Error):
 
 
 class KeyDefaultDict(collections.defaultdict):
+    """ defaultdict modification that provides the key to the factory. """
     def __missing__(self, key):
         if self.default_factory is not None:
             self[key] = self.default_factory(key)
@@ -122,6 +123,7 @@ def split_irc_line(s):
 
 
 def parse_identity(who):
+    """ Extract the parts out of an IRC user identifier string. """
     nick, rest = who.split('!')
     username, host = rest.split('@')
 
@@ -132,6 +134,7 @@ def parse_identity(who):
 
 
 def get_symbolic_command(command):
+    """ Normalizes both numeric and symbolic commands into just symbolic commands. """
     if command.isdecimal():
         try:
             return numeric_to_symbolic[command]
@@ -141,6 +144,25 @@ def get_symbolic_command(command):
         return command
 
 
+def decode(line):
+    """ Attempts to decode the line with utf8 but falls back to chardet otherwise. """
+    try:
+        line = str(line, encoding='utf8')
+    except UnicodeDecodeError:
+        logger.debug('UTF8 decode failed, bytes: {}', line)
+        encoding = chardet.detect(line)['encoding']
+        logger.debug('Tried autodetecting and got {}, decoding now', encoding)
+        line = str(line, encoding=encoding)
+    return line
+
+
+def parse_line(line):
+    """ Normalizes the line from the server and splits it into component parts. """
+    line = decode(line)
+    line = line.strip()
+    return split_irc_line(line)
+
+
 class IRCServerHandler:
     """ Models a single IRC Server and channels/users on that server.
 
@@ -148,9 +170,11 @@ class IRCServerHandler:
     it will directly call whenever it wants to send things to the server. Then you feed it each line from the IRC server
     by calling `IRCServerHandler.handle_line`.
 
+    Set the write function after instantiation (`server_handler.write_function = some_write_function`).
+
     Args:
-        nick (str): The nick to use for this server.
-        write_function: A callback that takes a single string argument and passes it on to the IRC server connection.
+        identity (User): A `User` object containing the identity of the user (nick, real name, etc)
+        debug_out_loud (bool): If true the protocol will spam select debug messages into all connected channels
     """
     def __init__(self, identity, debug_out_loud=False):
         # Useful things
@@ -173,6 +197,7 @@ class IRCServerHandler:
         self._debug_out_loud = debug_out_loud
 
     def get_user_full(self, who):
+        """ Return the User object for a given IRC identity string, creating if necessary. """
         nick, username, host = parse_identity(who)
         try:
             user = self.users[nick]
@@ -193,6 +218,15 @@ class IRCServerHandler:
             return self.users[nick]
 
     def add_callback(self, signal, callback):
+        """ Attach a function to be called on an IRC command (specified symbolically).
+
+        The function will be called with the following args:
+            * The calling IRCServerHandler object
+            * The prefix of the command (usually who it's from?)
+            * The remaining arguments from the command
+
+        For example the `join` signal will be called with `(self, who, channel)`.
+        """
         self.callbacks[signal].add(callback)
 
     @property
@@ -211,15 +245,8 @@ class IRCServerHandler:
         self._write('USER {} 0 * :{}'.format(self.identity.username, self.identity.real_name))
 
     def handle_line(self, line):
-        try:
-            line = str(line, encoding='utf8')
-        except UnicodeDecodeError:
-            logger.debug('UTF8 decode failed, bytes: {}', line)
-            encoding = chardet.detect(line)['encoding']
-            logger.debug('Tried autodetecting and got {}, decoding now', encoding)
-            line = str(line, encoding=encoding)
-        line = line.strip()
-        (prefix, command, args) = split_irc_line(line)
+        # Parse the line
+        prefix, command, args = parse_line(line)
 
         try:
             symbolic_command = get_symbolic_command(command)
@@ -227,6 +254,7 @@ class IRCServerHandler:
             self.log_unhandled(command, prefix, args)
             return
 
+        # local callbacks maintain the state of the model and deal with the protocol stuff
         try:
             handler_name = 'on_{}'.format(symbolic_command.lower())
             handler = getattr(self, handler_name)
@@ -235,10 +263,12 @@ class IRCServerHandler:
         else:
             handler(prefix, *args)
 
+        # user callbacks do whatever they want them to do
         for callback in self.callbacks[symbolic_command.lower()]:
             callback(self, prefix, *args)
 
     def log_unhandled(self, command, prefix, args):
+        """ Called when we encounter a command we either don't know or don't have a handler for. """
         logger.warning('Unhandled Command received: {} with args ({}) from prefix {}'.format(command, args, prefix))
 
     # ===============
@@ -266,11 +296,13 @@ class IRCServerHandler:
         pass
 
     def on_rpl_namreply(self, prefix, recipient, secrecy, channel, nicks):
+        """ Sent when you join a channel or run /names """
         for nick in nicks.split():
             user = self.get_user_by_nick(nick)
             self.channels[channel].user_join(user)
 
     def on_rpl_endofnames(self, *args):
+        """ Sent when we're done with rpl_namreply messages """
         pass
     # ==========
 
