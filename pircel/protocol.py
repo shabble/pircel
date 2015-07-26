@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf8 -*-
 import collections
+import functools
 import logging
 import pprint
 
@@ -385,6 +386,7 @@ class IRCServerHandler:
     # =============
 
 
+@functools.total_ordering
 class User:
     def __init__(self, name, username=None, real_name=None, password=None):
         self.name = name
@@ -420,6 +422,18 @@ class User:
 
     def __repr__(self):
         return str(self)
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __lt__(self, other):
+        return self.name < other.name
+
+    def __gt__(self, other):
+        return self.name > other.name
+
+    def __hash__(self):
+        return hash(self.name)
 
 
 class IRCChannel:
