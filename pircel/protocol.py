@@ -413,9 +413,12 @@ class User:
             raise UnknownModeCommandError('Unknown mode change command "{}", expecting "-" or "+"'.format(command))
 
     def __str__(self):
-        modes = {}
+        modes = set()
         for m in self.modes.values():
             modes |= m
+
+        if self.fully_known:
+            modes.add('&')
 
         return '{}!{} +{}'.format(self.name, self.username,
                                   ''.join(modes))
