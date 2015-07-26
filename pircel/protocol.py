@@ -3,7 +3,6 @@
 import collections
 import functools
 import logging
-import pprint
 
 import chardet
 
@@ -185,9 +184,8 @@ class IRCServerHandler:
         # Default values
         self.motd = ''
 
-        self.channels = KeyDefaultDict(lambda channel_name: IRCChannel(self._write, channel_name,
-                                                                       debug_out_loud=debug_out_loud,
-                                                                       identity=identity))
+        self.channels = KeyDefaultDict(lambda channel_name: IRCChannel(channel_name, self,
+                                                                       debug_out_loud=debug_out_loud,))
 
         self.users = dict()
         self.users[identity.nick] = identity
@@ -440,10 +438,11 @@ class User:
 
 
 class IRCChannel:
-    def __init__(self, write_function, name, identity, debug_out_loud=False):
-        self._write = write_function
+    def __init__(self, name, server, debug_out_loud=False):
+        self.server = server
+        self._write = server.write_function
         self.name = name
-        self.identity = identity
+        self.identity = server.identity
         self.users = set()
         self.messages = []
 
@@ -475,10 +474,11 @@ class IRCChannel:
                 self.send_message(self.messages)
 
         elif msg.startswith('!d listusers'):
-            logger.debug(self.users)
+            logger.debug(self.server.users)
 
             if self._debug_out_loud:
-                self.send_message(pprint.pformat(self.users))
+                for user in sorted(self.server.users.values()):
+                    self.send_message(user)
 
         elif msg.startswith('!d raise'):
             raise Error('Debug exception')
