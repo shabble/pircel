@@ -57,14 +57,17 @@ def connect(args, server_handler):
     # Connect to server
     line_stream.connect(args.server, 6667)
 
+    connected_rpl = 'rpl_welcome'
+
     def _join_channel(channel):
         def inner_func(*args):
             server_handler.channels[channel].join()
+            server_handler.remove_callback(connected_rpl, inner_func)
         return inner_func
 
     # Join channels
     for channel in args.channel:
-        server_handler.add_callback('rpl_endofmotd', _join_channel(channel))
+        server_handler.add_callback(connected_rpl, _join_channel(channel))
 
 
 def main_loop():
