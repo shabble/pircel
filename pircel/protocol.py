@@ -266,6 +266,9 @@ class IRCServerHandler:
         """
         self.callbacks[signal].add(callback)
 
+    def remove_callback(self, signal, callback):
+        self.callbacks[signal].remove(callback)
+
     @property
     def write_function(self):
         return self._write
@@ -304,7 +307,7 @@ class IRCServerHandler:
             handler(prefix, *args)
 
         # user callbacks do whatever they want them to do
-        for callback in self.callbacks[symbolic_command.lower()]:
+        for callback in set(self.callbacks[symbolic_command.lower()]):
             callback(self, prefix, *args)
 
     def log_unhandled(self, command, prefix, args):
