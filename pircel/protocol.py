@@ -281,6 +281,9 @@ class IRCServerHandler:
         self._write('NICK {}'.format(self.identity.nick))
         self._write('USER {} 0 * :{}'.format(self.identity.username, self.identity.real_name))
 
+    def who(self, mask):
+        self._write('WHO {}'.format(mask))
+
     def handle_line(self, line):
         # Parse the line
         prefix, command, args = parse_line(line)
@@ -416,6 +419,18 @@ class IRCServerHandler:
 
     def on_rpl_endofmotd(self, *args):
         logger.info(self.motd)
+        self.who('0')
+
+    def on_rpl_whoreply(self, prefix, recipient, channel, user, host, server, nick, *args):
+        # the last parameter will always be there, there are a bunch of optionals in between
+        *args, hopcount_and_realname = args
+
+        hopcount, realname = hopcount_and_realname.split(' ', maxsplit=1)
+        user = self.get_user_full('{}!{}@{}'.format(nick, user, host))
+        user.real_name = realname
+
+    def on_rpl_endofwho(self, *args):
+        pass
 
     # =============
     # Handlers done
