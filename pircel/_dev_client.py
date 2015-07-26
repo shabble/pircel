@@ -57,9 +57,14 @@ def connect(args, server_handler):
     # Connect to server
     line_stream.connect(args.server, 6667)
 
+    def _join_channel(channel):
+        def inner_func(*args):
+            server_handler.channels[channel].join()
+        return inner_func
+
     # Join channels
     for channel in args.channel:
-        loopinstance.call_later(CHANNEL_JOIN_DELAY, server_handler.channels[channel].join)
+        server_handler.add_callback('rpl_endofmotd', _join_channel(channel))
 
 
 def main_loop():
