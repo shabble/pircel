@@ -31,6 +31,10 @@ class UnknownModeCommandError(Error):
     """ Exception thrown on unknown mode change command. """
 
 
+class ModeNotFoundError(Error):
+    """ Exception thrown when we try to remove a mode that a user doesn't have. """
+
+
 class KeyDefaultDict(collections.defaultdict):
     """ defaultdict modification that provides the key to the factory. """
     def __missing__(self, key):
@@ -196,7 +200,15 @@ class IRCServerHandler:
         self._debug_out_loud = debug_out_loud
 
     def get_user_full(self, who):
-        """ Return the User object for a given IRC identity string, creating if necessary. """
+        """ Return the User object for a given IRC identity string, creating if necessary.
+
+        Args:
+            who (str): Full IRC identity string (as specified in §2.3.1 of rfc2812, second part of "prefix" definition)
+                       of the user
+        Returns:
+            A User object with a nick property that is unique between this method and `get_user_by_nick`; e.g.
+            subsequent calls of either with the same *nick* part will result in the same object being returned.
+        """
         nick, username, host = parse_identity(who)
         try:
             user = self.users[nick]
@@ -209,12 +221,38 @@ class IRCServerHandler:
             self.users[nick].fully_known = True
             return self.users[nick]
 
-    def get_user_by_nick(self, nick):
+    def get_user_by_nick(self, nick, channel=None):
+        """ Return the user object from just the nick.
+
+        Will also parse "@nick" or "+nick" properly, and set the mode if the channel is provided.
+
+        Args:
+            nick (str): Either the nick or the nick with a channel mode prefix.
+            channel (str): The name of the channel if this is being called from a 'RPL_NAMREPLY' callback.
+        Returns:
+            A User object for the specified nick; this object will be unique by nick if only this method and
+            `get_user_full` are used to get User objects.
+        """
+        # Pull @ or + off the front
+        # I checked the RFC; these should be the only two chars
+        mode = None
+        if nick[0] in '@+':
+            mode = nick[0]
+            nick = nick[1:]
+
+        # Get or create and get the user object
         try:
-            return self.users[nick]
+            user = self.users[nick]
         except KeyError:
             self.users[nick] = User(nick)
-            return self.users[nick]
+            user = self.users[nick]
+
+        # Set +o or +v if we need to
+        if channel is not None and mode is not None:
+            mode = {'@': 'o', '+': 'v'}[mode]  # Look it up in a local dict
+            user.modes[channel].add(mode)
+
+        return user
 
     def add_callback(self, signal, callback):
         """ Attach a function to be called on an IRC command (specified symbolically).
@@ -297,7 +335,7 @@ class IRCServerHandler:
     def on_rpl_namreply(self, prefix, recipient, secrecy, channel, nicks):
         """ Sent when you join a channel or run /names """
         for nick in nicks.split():
-            user = self.get_user_by_nick(nick)
+            user = self.get_user_by_nick(nick, channel)
             self.channels[channel].user_join(user)
 
     def on_rpl_endofnames(self, *args):
@@ -407,6 +445,9 @@ class User:
             self.modes[channel].add(mode)
         elif direction == '-' and mode in self.modes:
             self.modes[channel].remove(mode)
+        elif mode not in self.modes:
+            raise ModeNotFoundError(
+                'User "{}" doesn\'t have mode "{}" that we were told to remove'.format(self.name, mode))
         else:
             raise UnknownModeCommandError('Unknown mode change command "{}", expecting "-" or "+"'.format(command))
 
