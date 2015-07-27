@@ -269,6 +269,9 @@ class IRCServerHandler:
     def remove_callback(self, signal, callback):
         self.callbacks[signal].remove(callback)
 
+    def clear_callbacks(self, signal):
+        self.callbacks[signal] = set()
+
     @property
     def write_function(self):
         return self._write
