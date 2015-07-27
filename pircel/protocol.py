@@ -283,7 +283,7 @@ class IRCServerHandler:
     def pong(self, value):
         self._write('PONG :{}'.format(value))
 
-    def pre_line(self):
+    def connect(self):
         self._write('NICK {}'.format(self.identity.nick))
         self._write('USER {} 0 * :{}'.format(self.identity.username, self.identity.real_name))
 

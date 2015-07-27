@@ -55,7 +55,7 @@ class IRCBot:
 
         # Attach instances
         server_handler.write_function = line_stream.write_function
-        line_stream.connect_callback = server_handler.pre_line
+        line_stream.connect_callback = server_handler.connect
         line_stream.line_callback = server_handler.handle_line
 
         if args.die_on_exception:
