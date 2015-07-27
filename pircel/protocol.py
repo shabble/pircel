@@ -157,6 +157,9 @@ def decode(line):
         encoding = chardet.detect(line)['encoding']
         logger.debug('Tried autodetecting and got %s, decoding now', encoding)
         line = str(line, encoding=encoding)
+    except TypeError as e:
+        if e.args[0] != 'decoding str is not supported':
+            raise
     return line
 
 
