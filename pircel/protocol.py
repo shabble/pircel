@@ -241,6 +241,12 @@ class IRCServerHandler:
             self._write('JOIN {} {}'.format(channel, password))
         else:
             self._write('JOIN {}'.format(channel))
+
+    def send_message(self, channel, message):
+        if not isinstance(message, (str, bytes)):
+            message = str(message)
+        for line in message.split('\n'):
+            self._write('PRIVMSG {} :{}'.format(channel, line))
     # =========================================================================
 
     # =========================================================================
