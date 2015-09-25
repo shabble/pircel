@@ -12,7 +12,7 @@ import logging
 
 from tornado import gen, ioloop, tcpclient
 
-from pircel import protocol
+from pircel import model, protocol
 
 
 logger = logging.getLogger(__name__)
@@ -55,9 +55,9 @@ class LineStream:
 
 class IRCBot:
     def __init__(self, args):
-        user = protocol.User(args.nick, args.username, args.real_name)
+        user = model.User(args.nick, args.username, args.real_name)
 
-        server_handler = protocol.IRCServerHandler(user, args.debug_out_loud)
+        server_handler = protocol.IRCServerHandler(user)
 
         line_stream = LineStream()
 
@@ -76,7 +76,7 @@ class IRCBot:
 
         def _join_channel(channel):
             def inner_func(*args):
-                server_handler.channels[channel].join()
+                server_handler.join(channel)
                 server_handler.remove_callback(connected_rpl, inner_func)
             return inner_func
 

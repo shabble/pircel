@@ -234,6 +234,13 @@ class IRCServerHandler:
 
     def who(self, mask):
         self._write('WHO {}'.format(mask))
+
+    def join(self, channel, password=None):
+        logger.debug('Joining %s', channel)
+        if password:
+            self._write('JOIN {} {}'.format(channel, password))
+        else:
+            self._write('JOIN {}'.format(channel))
     # =========================================================================
 
     # =========================================================================
