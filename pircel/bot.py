@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+pircel.bot
+----------
+
+This module defines an example of using pircel with tornado to produce a "bot" that does basically nothing.
+
+It can, however, be subclassed easily to do bot-like-things.
+"""
 import logging
 
 from tornado import gen, ioloop, tcpclient
