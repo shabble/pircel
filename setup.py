@@ -8,6 +8,7 @@ import pircel
 
 install_requires = [
     'chardet',
+    'peewee',
 ]
 
 classifiers = [
