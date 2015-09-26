@@ -93,8 +93,8 @@ class IRCBot:
         self.line_stream.start()
 
     @classmethod
-    def from_default_args(cls, **kwargs):
-        args = get_parsed_args()
+    def from_default_args(cls, mutate_parser=None, **kwargs):
+        args = get_parsed_args(mutate_parser)
         for key, value in kwargs.items():
             setattr(args, key, value)
         return cls(args)
@@ -129,8 +129,11 @@ def get_arg_parser():
     return arg_parser
 
 
-def get_parsed_args():
+def get_parsed_args(mutate_parser=None):
     arg_parser = get_arg_parser()
+    if mutate_parser is not None:
+        arg_parser = mutate_parser(arg_parser)
+
     args = arg_parser.parse_args()
 
     if not args.channel:
