@@ -242,11 +242,17 @@ class IRCServerHandler:
         else:
             self._write('JOIN {}'.format(channel))
 
-    def send_message(self, channel, message):
+    def _split_line_channel_command(self, command, channel, message):
         if not isinstance(message, (str, bytes)):
             message = str(message)
         for line in message.split('\n'):
-            self._write('PRIVMSG {} :{}'.format(channel, line))
+            self._write('{} {} :{}'.format(command, channel, line))
+
+    def send_message(self, channel, message):
+        self._split_line_channel_command('PRIVMSG', channel, message)
+
+    def send_notice(self, channel, message):
+        self._split_line_channel_command('NOTICE', channel, message)
     # =========================================================================
 
     # =========================================================================
