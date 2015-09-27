@@ -194,13 +194,18 @@ class IRCServerHandler:
             handler_name = 'on_{}'.format(symbolic_command.lower())
             handler = getattr(self, handler_name)
         except AttributeError:
-            self.log_unhandled(symbolic_command, prefix, args)
+            handled = False
         else:
             handler(prefix, *args)
+            handled = True
 
         # user callbacks do whatever they want them to do
         for callback in set(self.callbacks[symbolic_command.lower()]):
+            handled = True
             callback(self, prefix, *args)
+
+        if not handled:
+            self.log_unhandled(symbolic_command, prefix, args)
 
     def log_unhandled(self, command, prefix, args):
         """ Called when we encounter a command we either don't know or don't have a handler for. """
@@ -217,7 +222,7 @@ class IRCServerHandler:
     # TODO: Should public API functions like `who` and `connect` be in here? Is
     #       this an appropriate description for this section?
     # =========================================================================
-    @property
+    @property  # Why is this a property?
     def write_function(self):
         return self._write
 
