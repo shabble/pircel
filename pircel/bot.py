@@ -9,6 +9,7 @@ This module defines an example of using pircel with tornado to produce a "bot" t
 It can, however, be subclassed easily to do bot-like-things.
 """
 import logging
+import ssl
 
 from tornado import gen, ioloop, tcpclient
 
@@ -26,9 +27,15 @@ class LineStream:
         self.connect_callback = None
 
     @gen.coroutine
-    def connect(self, host, port):
+    def connect(self, host, port, secure):
         logger.debug('Connecting to server %s:%s', host, port)
-        self.connection = yield self.tcp_client_factory.connect(host, port)
+
+        if secure:
+            ssl_options = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+        else:
+            ssl_options = None
+
+        self.connection = yield self.tcp_client_factory.connect(host, port, ssl_options=ssl_options)
         logger.debug('Connected.')
         if self.connect_callback is not None:
             self.connect_callback()
@@ -70,7 +77,7 @@ class IRCBot:
             loopinstance.handle_callback_exception = _exc_exit
 
         # Connect to server
-        line_stream.connect(args.server, 6667)
+        line_stream.connect(args.server, args.port, not args.insecure)
 
         connected_rpl = 'rpl_welcome'
 
@@ -118,6 +125,10 @@ def get_arg_parser():
                             help='Real name to use on the server')
     arg_parser.add_argument('-s', '--server', default='irc.imaginarynet.org.uk',
                             help='IRC Server to connect to')
+    arg_parser.add_argument('-p', '--port', default=6697,
+                            help='Port to use')
+    arg_parser.add_argument('--insecure', action='store_true',
+                            help="Don't use SSL/TLS for whatever reason")
     arg_parser.add_argument('-c', '--channel', action='append',
                             help='Channel to join on server')
     arg_parser.add_argument('-D', '--debug', action='store_true',
