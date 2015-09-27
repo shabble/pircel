@@ -11,6 +11,7 @@ It can, however, be subclassed easily to do bot-like-things.
 import logging
 import ssl
 
+import peewee
 from tornado import gen, ioloop, tcpclient
 
 from pircel import model, protocol
@@ -67,6 +68,20 @@ class IRCBot:
         server_handler = protocol.IRCServerHandler(user)
 
         line_stream = LineStream()
+
+        if args.storage_database is not None:
+            db = peewee.SqliteDatabase(args.storage_database)
+            model.database.initialize(db)
+            model.create_tables()
+            user.save()
+
+            try:
+                controller = model.IRCServerController.new(args.server, args.port, not args.insecure, user)
+            except peewee.IntegrityError:
+                controller = model.IRCServerController.get(args.server, args.port)
+
+            controller.server_handler = server_handler
+            self.controller = controller
 
         # Attach instances
         server_handler.write_function = line_stream.write_function
@@ -137,6 +152,8 @@ def get_arg_parser():
                             help='Exit program when an unhandled exception occurs, rather than trying to recover')
     arg_parser.add_argument('--debug-out-loud', action='store_true',
                             help='Print selected debug messages out over IRC')
+    arg_parser.add_argument('--storage-database', default=None,
+                            help='sqlite database, defaults to no storage')
     return arg_parser
 
 
