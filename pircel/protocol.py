@@ -186,7 +186,7 @@ class IRCServerHandler:
         try:
             symbolic_command = get_symbolic_command(command)
         except UnknownNumericCommandError:
-            self.log_unhandled(command, prefix, args)
+            self.log_unhandled(line)
             return
 
         # local callbacks maintain the state of the model and deal with the protocol stuff
@@ -205,11 +205,14 @@ class IRCServerHandler:
             callback(self, prefix, *args)
 
         if not handled:
-            self.log_unhandled(symbolic_command, prefix, args)
+            self.log_unhandled(line)
 
-    def log_unhandled(self, command, prefix, args):
-        """ Called when we encounter a command we either don't know or don't have a handler for. """
-        logger.warning('Unhandled Command received: %s with args (%s) from prefix %s', command, args, prefix)
+    def log_unhandled(self, line):
+        """ Called when we encounter a command we either don't know or don't have a handler for.
+
+        Method rather than function because I might later make it send debug logging over IRC sometimes.
+        """
+        logger.warning('Unhandled: %s', line.decode().rstrip())
     # =========================================================================
 
     # =========================================================================
