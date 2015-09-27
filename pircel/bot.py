@@ -62,7 +62,7 @@ class LineStream:
 
 class IRCBot:
     def __init__(self, args):
-        user = model.User(args.nick, args.username, args.real_name)
+        user = model.UserDetails(nick=args.nick, username=args.username, realname=args.real_name)
 
         server_handler = protocol.IRCServerHandler(user)
 

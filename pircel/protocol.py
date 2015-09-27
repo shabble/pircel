@@ -230,7 +230,7 @@ class IRCServerHandler:
 
     def connect(self):
         self._write('NICK {}'.format(self.identity.nick))
-        self._write('USER {} 0 * :{}'.format(self.identity.username, self.identity.real_name))
+        self._write('USER {} 0 * :{}'.format(self.identity.username, self.identity.realname))
 
     def who(self, mask):
         self._write('WHO {}'.format(mask))
