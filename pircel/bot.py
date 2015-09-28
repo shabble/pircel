@@ -9,56 +9,15 @@ This module defines an example of using pircel with tornado to produce a "bot" t
 It can, however, be subclassed easily to do bot-like-things.
 """
 import logging
-import ssl
 
 import peewee
-from tornado import gen, ioloop, tcpclient
+from tornado import ioloop
 
-from pircel import model, protocol
+from pircel import model, protocol, tornado_adapter
 
 
 logger = logging.getLogger(__name__)
-loopinstance = ioloop.IOLoop.instance()
-
-
-class LineStream:
-    def __init__(self):
-        self.tcp_client_factory = tcpclient.TCPClient()
-        self.line_callback = None
-        self.connect_callback = None
-
-    @gen.coroutine
-    def connect(self, host, port, secure):
-        logger.debug('Connecting to server %s:%s', host, port)
-
-        if secure:
-            ssl_options = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
-        else:
-            ssl_options = None
-
-        self.connection = yield self.tcp_client_factory.connect(host, port, ssl_options=ssl_options)
-        logger.debug('Connected.')
-        if self.connect_callback is not None:
-            self.connect_callback()
-            logger.debug('Called post-connection callback')
-        self._schedule_line()
-
-    def handle_line(self, line):
-        if self.line_callback is not None:
-            self.line_callback(line)
-
-        self._schedule_line()
-
-    def _schedule_line(self):
-        self.connection.read_until(b'\n', self.handle_line)
-
-    def write_function(self, line):
-        if line[-1] != '\n':
-            line += '\n'
-        return self.connection.write(line.encode('utf8'))
-
-    def start(self):
-        loopinstance.start()
+loopinstance = ioloop.IOLoop.current()
 
 
 class IRCBot:
@@ -67,8 +26,9 @@ class IRCBot:
 
         server_handler = protocol.IRCServerHandler(user)
 
-        line_stream = LineStream()
+        line_stream = tornado_adapter.LineStream()
 
+        controller = None
         if args.storage_database is not None:
             db = peewee.SqliteDatabase(args.storage_database)
             model.database.initialize(db)
@@ -81,30 +41,12 @@ class IRCBot:
                 controller = model.IRCServerController.get(args.server, args.port)
 
             controller.server_handler = server_handler
-            self.controller = controller
+        self.controller = controller
 
-        # Attach instances
-        server_handler.write_function = line_stream.write_function
-        line_stream.connect_callback = server_handler.connect
-        line_stream.line_callback = server_handler.handle_line
-
-        if args.die_on_exception:
-            loopinstance.handle_callback_exception = _exc_exit
+        irc_client = tornado_adapter.IRCClient(line_stream, server_handler, controller)
 
         # Connect to server
-        line_stream.connect(args.server, args.port, not args.insecure)
-
-        connected_rpl = 'rpl_welcome'
-
-        def _join_channel(channel):
-            def inner_func(*args):
-                server_handler.join(channel)
-                server_handler.remove_callback(connected_rpl, inner_func)
-            return inner_func
-
-        # Join channels
-        for channel in args.channel:
-            server_handler.add_callback(connected_rpl, _join_channel(channel))
+        irc_client.connect(args.server, args.port, args.insecure, args.channel)
 
         self.args = args
         self.server = server_handler
@@ -112,7 +54,7 @@ class IRCBot:
         self.user = user
 
     def main(self):
-        self.line_stream.start()
+        loopinstance.start()
 
     @classmethod
     def from_default_args(cls, mutate_parser=None, **kwargs):
@@ -179,6 +121,9 @@ def main():
     log_format = "%(asctime)s\t%(levelname)s\t%(module)s:%(funcName)s:%(lineno)d\t%(message)s"
     logging.basicConfig(level=log_level, format=log_format, datefmt=log_date_format)
     logging.captureWarnings(True)
+
+    if bot.args.die_on_exception:
+        loopinstance.handle_callback_exception = _exc_exit
 
     bot.main()
 
