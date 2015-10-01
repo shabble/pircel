@@ -11,14 +11,16 @@ This module defines functions and objects for interacting with an IRC server inc
       (e.g. it'll work with both asyncio and tornado if you set them up right; though twisted won't work at the moment
       because it doesn't support python 3)
 """
-import collections
 import logging
 
 import chardet
 
 import pircel
+import pircel.signals
 
 logger = logging.getLogger(__name__)
+
+signal_factory = pircel.signals.namespace('irc_protocol')
 
 
 class Error(pircel.Error):
@@ -171,8 +173,6 @@ class IRCServerHandler:
         # Default values
         self.motd = ''
 
-        self.callbacks = collections.defaultdict(set)
-
     # =========================================================================
     # Parsing and "reading"
     # ---------------------
@@ -200,9 +200,10 @@ class IRCServerHandler:
             handled = True
 
         # user callbacks do whatever they want them to do
-        for callback in set(self.callbacks[symbolic_command.lower()]):
+        signal = signal_factory(symbolic_command.lower())
+        signal.send(self, prefix=prefix, args=args)
+        if signal.receivers:
             handled = True
-            callback(self, prefix, *args)
 
         if not handled:
             self.log_unhandled(line)
@@ -283,13 +284,10 @@ class IRCServerHandler:
 
         For example the `join` signal will be called with `(self, who, channel)`.
         """
-        self.callbacks[signal].add(callback)
+        signal_factory(signal).connect(callback, sender=self)
 
     def remove_callback(self, signal, callback):
-        self.callbacks[signal].remove(callback)
-
-    def clear_callbacks(self, signal):
-        self.callbacks[signal] = set()
+        signal_factory(signal).disconnect(callback, sender=self)
     # =========================================================================
 
     # =========================================================================

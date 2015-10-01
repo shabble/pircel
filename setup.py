@@ -7,8 +7,9 @@ from setuptools import setup
 import pircel
 
 install_requires = [
-    'chardet',
-    'peewee',
+    'chardet>=2.3',
+    'peewee>=2.6',
+    'blinker>=1.4',
 ]
 
 classifiers = [

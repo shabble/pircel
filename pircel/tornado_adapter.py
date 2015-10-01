@@ -80,7 +80,7 @@ class IRCClient:
         connected_rpl = 'rpl_welcome'
 
         def _join_channel(channel):
-            def inner_func(*args):
+            def inner_func(*args, **kwargs):
                 self.server_handler.join(channel)
                 self.server_handler.remove_callback(connected_rpl, inner_func)
             return inner_func
