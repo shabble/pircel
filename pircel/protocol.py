@@ -169,6 +169,7 @@ class IRCServerHandler:
         """
         self._write = None
         self.identity = identity
+        self._user_string = ':{}!~{}@localhost'.format(self.identity.nick, self.identity.username)
 
         # Default values
         self.motd = ''
@@ -255,7 +256,9 @@ class IRCServerHandler:
         if not isinstance(message, (str, bytes)):
             message = str(message)
         for line in message.split('\n'):
-            self._write('{} {} :{}'.format(command, channel, line))
+            command = '{} {} :{}'.format(command, channel, line)
+            self._write(command)
+            self.handle_line('{} {}'.format(self._user_string, command))
 
     def send_message(self, channel, message):
         self._split_line_channel_command('PRIVMSG', channel, message)
