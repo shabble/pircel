@@ -81,13 +81,14 @@ class IRCClient:
 
         def _join_channel(channel):
             def inner_func(*args, **kwargs):
+                logger.debug('Joining channel: %s', channel)
                 self.server_handler.join(channel)
                 self.server_handler.remove_callback(connected_rpl, inner_func)
             return inner_func
 
         # Join channels
         for channel in channels:
-            self.server_handler.add_callback(connected_rpl, _join_channel(channel))
+            self.server_handler.add_callback(connected_rpl, _join_channel(channel), weak=False)
 
     @classmethod
     def from_interface(cls, interface):

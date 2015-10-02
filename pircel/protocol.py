@@ -190,7 +190,7 @@ class IRCServerHandler:
             self.log_unhandled(line)
             return
 
-        # local callbacks maintain the state of the model and deal with the protocol stuff
+        # local callbacks deal with the protocol stuff
         try:
             handler_name = 'on_{}'.format(symbolic_command.lower())
             handler = getattr(self, handler_name)
@@ -277,7 +277,7 @@ class IRCServerHandler:
     # A callback is any old callable, details in the docstring for
     # `add_callback`.
     # =========================================================================
-    def add_callback(self, signal, callback):
+    def add_callback(self, signal, callback, weak=True):
         """ Attach a function to be called on an IRC command (specified symbolically).
 
         The function will be called with the following args:
@@ -287,7 +287,7 @@ class IRCServerHandler:
 
         For example the `join` signal will be called with `(self, who, channel)`.
         """
-        signal_factory(signal).connect(callback, sender=self)
+        signal_factory(signal).connect(callback, sender=self, weak=weak)
 
     def remove_callback(self, signal, callback):
         signal_factory(signal).disconnect(callback, sender=self)
