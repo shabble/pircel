@@ -53,9 +53,9 @@ class LineStream:
 
 
 class IRCClient:
-    def __init__(self, line_stream, server_handler, controller=None):
-        if controller is not None:
-            controller.server_handler = server_handler
+    def __init__(self, line_stream, server_handler, interface=None):
+        if interface is not None:
+            interface.server_handler = server_handler
 
         # Attach instances
         server_handler.write_function = line_stream.write_function
@@ -64,14 +64,14 @@ class IRCClient:
 
         self.line_stream = line_stream
         self.server_handler = server_handler
-        self.controller = controller
+        self.interface = interface
 
     def connect(self, server=None, port=None, insecure=None, channels=None):
-        # If we have a controller we ignore the above inputs
-        if self.controller is not None:
-            server, port, secure = self.controller.connection_details
+        # If we have a interface we ignore the above inputs
+        if self.interface is not None:
+            server, port, secure = self.interface.connection_details
             insecure = not secure
-            channels = (channel.name for channel in self.controller.channels)
+            channels = (channel.name for channel in self.interface.channels)
 
         # Connect to server
         self.line_stream.connect(server, port, not insecure)
@@ -90,10 +90,10 @@ class IRCClient:
             self.server_handler.add_callback(connected_rpl, _join_channel(channel))
 
     @classmethod
-    def from_controller(cls, controller):
+    def from_interface(cls, interface):
         line_stream = LineStream()
-        server_handler = protocol.IRCServerHandler(controller.identity)
-        return cls(line_stream, server_handler, controller)
+        server_handler = protocol.IRCServerHandler(interface.identity)
+        return cls(line_stream, server_handler, interface)
 
 
 def main():

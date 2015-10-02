@@ -28,7 +28,7 @@ class IRCBot:
 
         line_stream = tornado_adapter.LineStream()
 
-        controller = None
+        interface = None
         if args.storage_database is not None:
             db = peewee.SqliteDatabase(args.storage_database)
             model.database.initialize(db)
@@ -36,14 +36,14 @@ class IRCBot:
             user.save()
 
             try:
-                controller = model.IRCServerController.new(args.server, args.port, not args.insecure, user)
+                interface = model.IRCServerInterface.new(args.server, args.port, not args.insecure, user)
             except peewee.IntegrityError:
-                controller = model.IRCServerController.get(args.server, args.port)
+                interface = model.IRCServerInterface.get(args.server, args.port)
 
-            controller.server_handler = server_handler
-        self.controller = controller
+            interface.server_handler = server_handler
+        self.interface = interface
 
-        irc_client = tornado_adapter.IRCClient(line_stream, server_handler, controller)
+        irc_client = tornado_adapter.IRCClient(line_stream, server_handler, interface)
 
         # Connect to server
         irc_client.connect(args.server, args.port, args.insecure, args.channel)
