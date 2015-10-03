@@ -169,10 +169,13 @@ class IRCServerHandler:
         """
         self._write = None
         self.identity = identity
-        self._user_string = ':{}!~{}@localhost'.format(self.identity.nick, self.identity.username)
 
         # Default values
         self.motd = ''
+
+    @property
+    def _user_string(self):
+        return ':{}!~{}@localhost'.format(self.identity.nick, self.identity.username)
 
     # =========================================================================
     # Parsing and "reading"
@@ -265,6 +268,10 @@ class IRCServerHandler:
 
     def send_notice(self, channel, message):
         self._split_line_channel_command('NOTICE', channel, message)
+
+    def change_nick(self, new_nick):
+        self._write('NICK {}'.format(new_nick))
+        self.identity.nick = new_nick
     # =========================================================================
 
     # =========================================================================
