@@ -32,7 +32,7 @@ class IRCBot:
         if args.storage_database is not None:
             db = peewee.SqliteDatabase(args.storage_database)
             model.database.initialize(db)
-            model.create_tables()
+            model.initialize()
             user.save()
 
             try:
