@@ -255,6 +255,9 @@ class IRCServerHandler:
         else:
             self._write('JOIN {}'.format(channel))
 
+    def part(self, channel):
+        self._write('PART {}'.format(channel))
+
     def _split_line_channel_command(self, command, channel, message):
         if not isinstance(message, (str, bytes)):
             message = str(message)

@@ -71,7 +71,7 @@ class IRCClient:
         if self.interface is not None:
             server, port, secure = self.interface.connection_details
             insecure = not secure
-            channels = (channel.name for channel in self.interface.channels)
+            channels = (channel.name for channel in self.interface.channels if channel.current)
 
         # Connect to server
         self.line_stream.connect(server, port, not insecure)
