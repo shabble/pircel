@@ -37,25 +37,33 @@ class TestModelUpdateValidity(unittest.TestCase):
         interface.server_handler = server_handler
         return interface
 
-    def test_multi_change_nick(self):
-        """ When people change nick to the same name multiple times.
-
-        Provided with feasible sequence of lines (join, part, nick, join, nick, part, nick, join, nick) for an actual
-        IRC session.
-
-        Testing for a bug in which multiple changes to the same nick would except and kill the connection.
-        """
+    def test_change_nick_id(self):
+        """ Tests that getting a user by nick after their nick changes returns the same id. """
         with self.db_context:
             interface = self.get_interface()
 
-            interface._handle_join(None, prefix='n!~u@h', args=['#c'])  # n joins
-            interface._handle_part(None, prefix='n!~u@h', args=['#c'])  # n parts
-            # n invisibly changes nick because they aren't in the channel, now m
-            interface._handle_join(None, prefix='m!~u@h', args=['#c'])  # n joins, now called m
-            interface._handle_nick(None, prefix='m!~u@h', args=['n'])  # n reclaims their nick
-            interface._handle_part(None, prefix='n!~u@h', args=['#c'])  # n parts
-            # n invisibly changes nick because they aren't in the channel, now m
-            interface._handle_join(None, prefix='m!~u@h', args=['#c'])  # n joins, now called m
+            model.create_user('n', interface.server_model)  # has id 1
+            user1_m = model.create_user('m', interface.server_model)
+
+            interface._handle_nick(None, prefix='m!~u@h', args=['n'])  # m reclaims their nick
+
+            user1_n = model.get_user('n', interface.server_model)
+
+            self.assertEqual(user1_m.id, user1_n.id)
+
+    def test_multi_change_nick(self):
+        """ Tests that no exception is raised when a user changes to a nick we think is still active. """
+        with self.db_context:
+            interface = self.get_interface()
+
+            buffer = model.create_buffer('#c', interface.server_model)
+            model.create_user(self.nick, interface.server_model)
+
+            current_user = model.create_user('m', interface.server_model)
+            model.create_user('n', interface.server_model, current=False)
+
+            model.create_membership(buffer, current_user)
+
             interface._handle_nick(None, prefix='m!~u@h', args=['n'])  # n reclaims their nick
 
 
