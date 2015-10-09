@@ -274,6 +274,9 @@ class IRCServerHandler:
     def send_notice(self, channel, message):
         self._split_line_channel_command('NOTICE', channel, message)
 
+    def send_ping(self, value):
+        self._write('PING {}'.format(value))
+
     def change_nick(self, new_nick):
         self._write('NICK {}'.format(new_nick))
         self.identity.nick = new_nick

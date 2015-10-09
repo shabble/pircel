@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import datetime
 import logging
 import ssl
 
@@ -59,12 +60,18 @@ class IRCClient:
 
         # Attach instances
         server_handler.write_function = line_stream.write_function
-        line_stream.connect_callback = server_handler.connect
+        line_stream.connect_callback = self.connect_callback
         line_stream.line_callback = server_handler.handle_line
 
         self.line_stream = line_stream
         self.server_handler = server_handler
         self.interface = interface
+
+    def connect_callback(self):
+        self.server_handler.connect()
+
+    def _ping(self):
+        self.server_handler.send_ping(datetime.datetime.utcnow().timestamp())
 
     def connect(self, server=None, port=None, insecure=None, channels=None):
         # If we have a interface we ignore the above inputs
@@ -72,6 +79,9 @@ class IRCClient:
             server, port, secure = self.interface.connection_details
             insecure = not secure
             channels = (channel.name for channel in self.interface.channels if channel.current)
+
+        self.ping_callback = ioloop.PeriodicCallback(self._ping, 60000)
+        self.ping_callback.start()
 
         # Connect to server
         self.line_stream.connect(server, port, not insecure)
