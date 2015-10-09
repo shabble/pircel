@@ -20,6 +20,7 @@ import pircel.signals
 
 logger = logging.getLogger(__name__)
 
+verbatim_logger = logging.getLogger('{}.verbatim'.format(__name__))
 signal_factory = pircel.signals.namespace('irc_protocol')
 
 
@@ -184,6 +185,7 @@ class IRCServerHandler:
     # Methods that result from a new input from the IRC server.
     # =========================================================================
     def handle_line(self, line):
+        verbatim_logger.debug(line)
         # Parse the line
         prefix, command, args = parse_line(line)
 
