@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import unittest
+from unittest import mock
 
 from pircel import protocol
 
@@ -12,7 +13,11 @@ class TestInitialConnection(unittest.TestCase):
 
     def setUp(self):
         self.output = []
-        identity = protocol.User(self.nick, self.user, self.realname)
+        identity = mock.MagicMock()
+        identity.nick = self.nick
+        identity.username = self.user
+        identity.realname = self.realname
+
         self.server_handler = protocol.IRCServerHandler(identity)
 
         self.server_handler.write_function = self.output.append
@@ -24,7 +29,7 @@ class TestInitialConnection(unittest.TestCase):
 
         self.assertListEqual(self.output, expected)
 
-    def test_pint(self):
+    def test_ping(self):
         self.server_handler.connect()
         ping_value = 'stuff'
         self.server_handler.handle_line('PING :{}'.format(ping_value))

@@ -6,3 +6,8 @@ Currently little exists, standard virtualenv stuff applies except we're using py
     virtualenv -p $(which python3) ...
 
 then `pip install -r requirements.txt` in the venv
+
+## Running tests
+Inside the virtualenv from above, run:
+
+    python -m unittest
