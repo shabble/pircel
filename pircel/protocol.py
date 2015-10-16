@@ -350,6 +350,7 @@ symbolic_to_numeric = {
     "RPL_CHANNELMODEIS": '324',
     "RPL_NOTOPIC": '331',
     "RPL_TOPIC": '332',
+    "RPL_TOPICWHOTIME": '333',
     "RPL_INVITING": '341',
     "RPL_SUMMONING": '342',
     "RPL_INVITELIST": '346',
