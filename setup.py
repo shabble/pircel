@@ -40,7 +40,5 @@ setup(
     py_modules=[],
     zip_safe=False,
     install_requires=install_requires,
-    extras_require={'bot': ['tornado']},
-    scripts=['bin/pircel'],
     package_data={},
 )
