@@ -260,6 +260,9 @@ class IRCServerHandler:
     def part(self, channel):
         self._write('PART {}'.format(channel))
 
+    def quit(self, message):
+        self._write('QUIT :{}'.format(message))
+
     def _split_line_channel_command(self, command, channel, message):
         if not isinstance(message, (str, bytes)):
             message = str(message)
