@@ -172,7 +172,15 @@ class IRCServerHandler:
         self.identity = identity
 
         # Default values
-        self.motd = ''
+        self.motd = []
+        self.motd_state = 0
+        self.motd_complete = False
+
+    def get_motd(self):
+        if self.motd_complete:
+            return '\n'.join(self.motd)
+        else:
+            return 'No MOTD Received'
 
     @property
     def _user_string(self):
@@ -185,19 +193,22 @@ class IRCServerHandler:
     # Methods that result from a new input from the IRC server.
     # =========================================================================
     def handle_line(self, line):
-        verbatim_logger.debug(line)
+        #verbatim_logger.debug(line)
         # Parse the line
-        prefix, command, args = parse_line(line)
+        parsed_line = parse_line(line)
+        prefix, command, args = parsed_line
 
         try:
             symbolic_command = get_symbolic_command(command)
         except UnknownNumericCommandError:
-            self.log_unhandled(line)
+            self.log_unhandled(line, why='unknown numeric %s' % command,
+                               sym_cmd='???', parsed=parsed_line)
             return
 
         # local callbacks deal with the protocol stuff
         try:
             handler_name = 'on_{}'.format(symbolic_command.lower())
+            #logger.info('checking for local handler for %s', handler_name)
             handler = getattr(self, handler_name)
         except AttributeError:
             handled = False
@@ -212,14 +223,19 @@ class IRCServerHandler:
             handled = True
 
         if not handled:
-            self.log_unhandled(line)
+            self.log_unhandled(line, why='no_usr_cb', sym_cmd=symbolic_command.lower(), parsed=parsed_line)
 
-    def log_unhandled(self, line):
+    def log_unhandled(self, line, why=None, parsed=None, sym_cmd=None):
         """ Called when we encounter a command we either don't know or don't have a handler for.
 
         Method rather than function because I might later make it send debug logging over IRC sometimes.
         """
-        logger.warning('Unhandled: %s', line.decode().rstrip())
+        if why is None:
+            import ipdb; ipdb.set_trace()
+        if parsed is not None:
+            prefix, cmd, args = parsed
+
+        logger.warning('Unhandled :reason={} :raw={!r} [:pfx={} :cmd={}/{} :args={!r}]'.format(why or '???', line.decode().rstrip(), prefix, cmd, sym_cmd, args))
     # =========================================================================
 
     # =========================================================================
@@ -241,6 +257,7 @@ class IRCServerHandler:
         self._write = new_write_function
 
     def pong(self, value):
+        self._last_pong = value
         self._write('PONG :{}'.format(value))
 
     def connect(self):
@@ -278,6 +295,7 @@ class IRCServerHandler:
         self._split_line_channel_command('NOTICE', channel, message)
 
     def send_ping(self, value):
+        self._last_ping = value
         self._write('PING {}'.format(value))
 
     def change_nick(self, new_nick):
@@ -321,6 +339,24 @@ class IRCServerHandler:
     def on_ping(self, prefix, token, *args):
         logger.debug('Ping received: %s, %s', prefix, token)
         self.pong(token)
+
+    def on_pong(self, prefix, token, *args):
+        logger.debug('Pong received: %s, %s', prefix, token)
+
+    def on_rpl_motd(self, prefix, token, motd_line):
+        self.motd_complete = False
+        if self.motd_state == 0:
+            self.motd = [motd_line]
+            self.motd_state = 1
+        elif self.motd_state == 1:
+            self.motd.append(motd_line)
+        else:
+            logger.error('bad MOTD protocol state, s={}, line={}'.format(self.motd_state, kmotd_line))
+    def on_rpl_endofmotd(self, prefix, token, motd_end_marker):
+        self.motd_complete = True
+        self.motd_state = 0
+        logger.info('motd complete, {} lines'.format(len(self.get_motd())))
+
     # =========================================================================
 
 symbolic_to_numeric = {
